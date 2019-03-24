@@ -131,6 +131,7 @@ while 1:
 		main()
 
 	# run the program every 5 minutes
+	# adding comment from code-refactoring branch
 	dt = datetime.datetime.now() + datetime.timedelta(minutes=5)
 
 	while datetime.datetime.now() < dt:
