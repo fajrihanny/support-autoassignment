@@ -126,9 +126,11 @@ def main():
 	return;
 
 while 1:
+
 	if __name__== "__main__":
 		main()
 
+	# run the program every 5 minutes
 	dt = datetime.datetime.now() + datetime.timedelta(minutes=5)
 
 	while datetime.datetime.now() < dt:
