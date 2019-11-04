@@ -13,8 +13,11 @@ def main():
 	startAuckland = datetime.time(18,0)
 	endAuckland = datetime.time(2,0)
 
-	startSaoPaolo = datetime.time(11,0)
-	endSaoPaolo = datetime.time(19,0)
+	startSanFransisco = 
+	endSanFransisco = 
+
+	# startSaoPaolo = datetime.time(11,0)
+	# endSaoPaolo = datetime.time(19,0)
 
 	# prepare the basic parameters
 	conn = sqlite3.connect('/Users/fajrihanny/Documents/autoassignment/autoassignment.db')
