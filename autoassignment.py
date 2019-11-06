@@ -16,10 +16,20 @@ def main():
 	startSanFransisco = datetime.time(16,0,0)
 	endSanFransisco = datetime.time(1,0,0)
 
+	# Agent's ID in Zendesk
+	# Fanny's : 28586777367 (auto_assign_berlin) 
+	# Alma's : 365630360474 (auto_assign_berlin) (support_berlin)
+	# Christian's : 377683598873 (auto_assign_berlin) (ops_berlin)
+	# Petra's : 378870695974 (auto_assign_berlin) (ops_berlin)
+	# Cat's : 368423045353 (auto_assign_nz) (support_nz)
+	# Amanda's : 394814287254 (auto_assign_sf) (support_sf)
+	# Dasha's : 367604755893 (auto_assign_berlin) (provision_berlin)
+	# Simona's : 26361445487
+
 	# prepare the basic parameters
 	conn = sqlite3.connect('/Users/fajrihanny/Documents/autoassignment/autoassignment.db')
 	availableAgentURL = 'https://contentful.zendesk.com/api/v2/search.json?query=type:user agent_ooo:false group:20917813 role:agent'
-	url = 'https://contentful.zendesk.com/api/v2/search.json?query=type:ticket status<=pending assignee:none group:Support Group requester:fajri.hanny@contentful.com'
+	url = 'https://contentful.zendesk.com/api/v2/search.json?query=type:ticket status<=pending assignee:none group:Support Group'
 	headers = {'Authorization':'Basic ZmFqcmkuaGFu_bnlAY29udGVudGZ1bC5jb20vdG9rZW46dDA4VjVSSEVvSHFIejVNZG9GVmVaYUdZd2J1Mnh0M2FsNTduM0ZsbA=='}
 	headersContentType = {'Authorization':'Basic ZmFqcmkuaGFubnlAY29udGVudGZ1bC5jb20vdG9rZW46dDA4VjVSSEVvSHFIejVNZG9GVmVaYUdZd2J1Mnh0M2FsNTduM0ZsbA==','Content-Type':'application/json'}
 
