@@ -16,6 +16,9 @@ def main():
 	startSaoPaolo = datetime.time(11,0)
 	endSaoPaolo = datetime.time(19,0)
 
+	startSanFransisco
+	endSanFransisco
+
 	# prepare the basic parameters
 	conn = sqlite3.connect('/Users/fajrihanny/Documents/autoassignment/autoassignment.db')
 	availableAgentURL = 'https://contentful.zendesk.com/api/v2/search.json?query=type:user agent_ooo:false group:20917813 role:agent'
