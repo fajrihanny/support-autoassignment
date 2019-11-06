@@ -5,19 +5,16 @@ import sqlite3
 import time
 
 def main():
-	# schedule construction - all in UTC timezone
+	# schedule construction - all in UTC timezone converted to 8 AM to 5 PM local time
 	print ('Starting the program.. ')
-	startBerlin = datetime.time(6,0,0)
-	endBerlin = datetime.time(14,0,0)
+	startBerlin = datetime.time(7,0,0)
+	endBerlin = datetime.time(16,0,0)
 
-	startAuckland = datetime.time(18,0)
-	endAuckland = datetime.time(2,0)
+	startAuckland = datetime.time(19,0,0)
+	endAuckland = datetime.time(4,0,0)
 
 	startSanFransisco = datetime.time(16,0,0)
 	endSanFransisco = datetime.time(1,0,0)
-
-	# startSaoPaolo = datetime.time(11,0)
-	# endSaoPaolo = datetime.time(19,0)
 
 	# prepare the basic parameters
 	conn = sqlite3.connect('/Users/fajrihanny/Documents/autoassignment/autoassignment.db')
