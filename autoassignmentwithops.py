@@ -5,8 +5,13 @@ from datetime import datetime
 from pytz import timezone
 import json
 import requests
+import sqlite3
+
 
 # ALL CONSTANTS GO HERE 
+
+# database initiation
+conn = sqlite3.connect('/Users/fajrihanny/Documents/autoassignment/autoassignment.db')
 
 # zendesk basic url and queries
 basic_url = 'https://contentful.zendesk.com/api/v2/search.json?query='
@@ -59,6 +64,7 @@ def main():
         if (tz_SF >= startTime and tz_SF <= endTime):
             availableTimeZone.append('sf')
 
+    # searching available agents based on timezones using user tags
     def getAvailableAgents(timeZoneToCheck,agentType):
         availableAgents = []
         for tz in range (0,len(timeZoneToCheck)):
@@ -72,7 +78,7 @@ def main():
         return availableAgents
     
 	# MAIN LOGIC IS HERE # 
-    # Logic to follow
+
     # 1. Get the tickets to distribute from both groups - Ops and Support Group.
     getUnassignedTickets()
     if (len(supportTicket)>0 or len(opsTicket)>0):
@@ -84,11 +90,17 @@ def main():
 			if (len(supportTicket)>0):
 				print ('Starting distribution for Support tickets')
                 getAvailableAgents(availableTimeZone,'support')
+                # 4. Get the last assignments of the agent and order them (param: agents available from no 3)
+                # 5. Assign the ticket to the agents (param: ordered agent from no 4) and save the assignment time along with agent ID
+                # 6. Update the ticket and post update to Slack channel with the name of the agent
 			else:
 				print ('No unassigned support tickets to distribute')
 			if (len(opsTicket)>0):
 				print ('Starting distribution for Ops tickets')
                 getAvailableAgents(availableTimeZone,'ops')
+                # 4. Get the last assignments of the agent and order them (param: agents available from no 3)
+                # 5. Assign the ticket to the agents (param: ordered agent from no 4) and save the assignment time along with agent ID
+                # 6. Update the ticket and post update to Slack channel with the name of the agent
 			else:
 				print ('No unassigned ops tickets to distribute')
 		else:
@@ -96,8 +108,7 @@ def main():
 	else:
 		print ('No unassigned tickets to distribute')
 
-    # 4. Get the last assignments of the agent and order them (param: agents available from no 3)
-    # 5. Assign the ticket to the agents (param: ordered agent from no 4) and save the assignment time along with agent ID
+
 
 
 while 1:
