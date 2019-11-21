@@ -10,9 +10,6 @@ import sqlite3
 
 # ALL CONSTANTS GO HERE 
 
-# database initiation
-conn = sqlite3.connect('/Users/fajrihanny/Documents/autoassignment/autoassignment.db')
-
 # zendesk basic url and queries
 basic_url = 'https://contentful.zendesk.com/api/v2/search.json?query='
 unassignedTicketsQuery = 'type:ticket status<=pending assignee:none group:'
@@ -76,6 +73,22 @@ def main():
             for agentIndex in range(0,agentDump['count']):
                 availableAgents.append(agentDump['result'][agentIndex]['id'])
         return availableAgents
+
+    def getLastAssignment(agentType):
+        conn = sqlite3.connect('/Users/fajrihanny/Documents/gitfiles/support-autoassignment/autoassignment.db')
+        orderofAgent = []
+        c = conn.cursor()
+	    for row in c.execute("select agent_id from autoassignment where agent_type="support" order by last_at asc"):
+            orderofAgent.append(row[0])
+        return orderofAgent
+    
+    def assignTicket(agents,order):
+        finalAgentOrder = []
+        for agentOrder in range (0,len(order)):
+		    if order[agentOrder] in agents:
+			    finalAgentOrder.append(order[agentOrder])
+        return finalAgentOrder
+
     
 	# MAIN LOGIC IS HERE # 
 
@@ -89,18 +102,25 @@ def main():
             # 3. Get the available agents based (param:available time zone from no 2)
 			if (len(supportTicket)>0):
 				print ('Starting distribution for Support tickets')
-                getAvailableAgents(availableTimeZone,'support')
-                # 4. Get the last assignments of the agent and order them (param: agents available from no 3)
-                # 5. Assign the ticket to the agents (param: ordered agent from no 4) and save the assignment time along with agent ID
-                # 6. Update the ticket and post update to Slack channel with the name of the agent
+                availSupport = getAvailableAgents(availableTimeZone,'support')
+                # 4. Get the last assignments of the agent and order them 
+                orderSupport = getLastAssignment('support')
+                # 5. Get the final order
+                assignTickets(orderSupport,availSupport)
+                # 6. Assign the ticket to the agents (param: ordered agent from no 4) and save the assignment time along with agent ID
+                # 7. Update the ticket and post update to Slack channel with the name of the agent
 			else:
 				print ('No unassigned support tickets to distribute')
 			if (len(opsTicket)>0):
+                orderofOps = []
 				print ('Starting distribution for Ops tickets')
-                getAvailableAgents(availableTimeZone,'ops')
-                # 4. Get the last assignments of the agent and order them (param: agents available from no 3)
-                # 5. Assign the ticket to the agents (param: ordered agent from no 4) and save the assignment time along with agent ID
-                # 6. Update the ticket and post update to Slack channel with the name of the agent
+                availOps = getAvailableAgents(availableTimeZone,'ops')
+                # 4. Get the last assignments of the agent and order them
+                orderOps = getLastAssignment('ops')  
+                # 5. Get the final order 
+                assignTickets(orderOps,availOps)      
+                # 6. Assign the ticket to the agents (param: ordered agent from no 4) and save the assignment time along with agent ID
+                # 7. Update the ticket and post update to Slack channel with the name of the agent
 			else:
 				print ('No unassigned ops tickets to distribute')
 		else:
