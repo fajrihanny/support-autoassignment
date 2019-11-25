@@ -19,6 +19,7 @@ agentSearch = 'type:user agent_ooo:false '
 # token and headers
 base64encodedtoken = 'ZmFqcmkuaGFu_bnlAY29udGVudGZ1bC5jb20vdG9rZW46dDA4VjVSSEVvSHFIejVNZG9GVmVaYUdZd2J1Mnh0M2FsNTduM0ZsbA=='
 headers = {'Authorization':'Basic '+base64encodedtoken}
+headersWithContentType = {'Authorization':'Basic '+base64encodedtoken,'Content-Type':'application/json'}
 
 # zendesk groups
 group_id_ops = '360000168347'
@@ -74,28 +75,42 @@ def main():
             for agentIndex in range(0,agentDump['count']):
                 availableAgents.append(agentDump['result'][agentIndex]['id'])
         return availableAgents
-
+    
+    # searching last assignment of the agents
     def getLastAssignment(agentType):
-        conn = sqlite3.connect('/Users/fajrihanny/Documents/gitfiles/support-autoassignment/autoassignment.db')
+        conn1 = sqlite3.connect('/Users/fajrihanny/Documents/Projects/support-autoassignment/autoassignment.db')
         orderofAgent = []
         c = conn.cursor()
 	    for row in c.execute("select agent_id from autoassignment where agent_type="support" order by last_at asc"):
             orderofAgent.append(row[0])
+        conn1.close()
         return orderofAgent
     
+    # getting the final order of the agents
     def getOrderAgent(agents,order):
         finalAgentOrder = []
         for agentOrder in range (0,len(order)):
 		    if order[agentOrder] in agents:
 			    finalAgentOrder.append(order[agentOrder])
         return finalAgentOrder
-
+    
+    # assigning tickets to agent and update the ticket
     def assignTickets(finalOrder,finalTickets):
+        conn2 = sqlite3.connect('/Users/fajrihanny/Documents/Projects/support-autoassignment/autoassignment.db')
+        d = conn2.cursor()
         lastPos = 0
         for ticketID in range(0,len(finalTickets)):
             updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
-            for agentIndex in range(lastPosition,len(finalOrder)):
-                
+            agentToWorkWith = str(finalOrder[(ticketID%len(finalOrder))])
+            payloadTicket = {'ticket': {'status':'open', 'comment': {'body':'This ticket is being auto assigned','public':'false','author_id':'25264784308'}, 'assignee_id':agentToWorkWith}}
+            payloadJson = json.dumps(payload)
+            updateTicket = requests.put(updateTicketURL,headers=headersWithContentType, data=payloadJson)
+            getAssignedTime = int(datetime.utcnow().timestamp())
+            d.execute("update autoassignment SET last_at = ? where agent_id = ?", (getAssignedTime,agentToWorkWith))
+            conn2.commit()
+        conn2.close()
+
+    # posting updates on Slack (later development)
 
 	# MAIN LOGIC IS HERE # 
 
@@ -117,8 +132,9 @@ def main():
                 orderSupport = getLastAssignment('support')
                 # 5. Get the final order
                 finalSupportOrder = getOrderAgent(orderSupport,availSupport)
-                # 6. Assign the ticket to the agents (param: ordered agent from no 4) and save the assignment time along with agent ID
-                # 7. Update the ticket and post update to Slack channel with the name of the agent
+                # 6. Assign the ticket to the agents, save the assignment time, and update the ticket with message from bot
+                assignTickets(finalSupportOrder,supportTicket)
+                # 7. Post update to Slack channel with the name of the agent
 			else:
 				print ('No unassigned support tickets to distribute')
 			if (len(opsTicket)>0):
@@ -131,7 +147,8 @@ def main():
                 orderOps = getLastAssignment('ops')  
                 # 5. Get the final order 
                 finalOpsOrder = getOrderAgent(orderOps,availOps)      
-                # 6. Assign the ticket to the agents (param: ordered agent from no 4) and save the assignment time along with agent ID
+                # 6. Assign the ticket to the agents, save the assignment time, and update the ticket with message from bot
+                assignTickets(finalOpsOrder,opsTicket)
                 # 7. Update the ticket and post update to Slack channel with the name of the agent
 			else:
 				print ('No unassigned ops tickets to distribute')
@@ -140,9 +157,6 @@ def main():
 	else:
 		print ('No unassigned tickets to distribute')
 
-
-
-
 while 1:
 
 	if __name__== "__main__":
@@ -150,7 +164,7 @@ while 1:
 
 	# run the program every 5 minutes
 	# adding comment from code-refactoring branch
-	dt = datetime.datetime.now() + datetime.timedelta(minutes=5)
+	dt = datetime.datetime.now() + datetime.timedelta(minutes=10)
 
 	while datetime.datetime.now() < dt:
 		time.sleep(1)
