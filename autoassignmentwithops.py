@@ -162,7 +162,7 @@ while 1:
 	if __name__== "__main__":
 		main()
 
-	# run the program every 5 minutes
+	# run the program every 10 minutes
 	# adding comment from code-refactoring branch
 	dt = datetime.datetime.now() + datetime.timedelta(minutes=10)
 
