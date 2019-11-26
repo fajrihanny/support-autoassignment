@@ -2,6 +2,8 @@
 
 
 from datetime import datetime
+from datetime import timedelta
+import time
 from pytz import timezone
 import json
 import requests
@@ -14,7 +16,6 @@ import sqlite3
 basic_url = 'https://contentful.zendesk.com/api/v2/search.json?query='
 ticket_url = 'https://contentful.zendesk.com/api/v2/tickets/'
 unassignedTicketsQuery = 'type:ticket status<=pending assignee:none requester:fajri.hanny@contentful.com group:'
-agentSearch = 'type:user agent_ooo:false '
 
 # token and headers
 base64encodedtoken = 'ZmFqcmkuaGFu_bnlAY29udGVudGZ1bC5jb20vdG9rZW46dDA4VjVSSEVvSHFIejVNZG9GVmVaYUdZd2J1Mnh0M2FsNTduM0ZsbA=='
@@ -33,8 +34,8 @@ def main():
     availableTimeZone = []
     supportTicket = []
     opsTicket = []
-    opsAgent = []
-    supportAgent = []
+    # opsAgent = []
+    # supportAgent = []
 
 	# ALL METHODS GO HERE #
 
@@ -45,9 +46,11 @@ def main():
         supportDump = json.loads(json.dumps(unassignedTicketsSupportresponse.json()))
         opsDump = json.loads(json.dumps(unassignedTicketsOpsresponse.json()))
         if (len(supportDump['results']) > 0):
+            print (str(len(supportDump['results']))+' support tickets are found')
             for ticket in range (0,len(supportDump['results'])):
                 supportTicket.append(supportDump['results'][ticket]['id'])
         if (len(opsDump['results']) > 0):
+            print (str(len(opsDump['results']))+' ops tickets are found')
             for ticket in range (0,len(opsDump['results'])):
                 opsTicket.append(opsDump['results'][ticket]['id'])
     
@@ -66,6 +69,7 @@ def main():
     # searching available agents based on timezones using user tags
     def getAvailableAgents(timeZoneToCheck,agentType):
         availableAgents = []
+        agentSearch = 'type:user agent_ooo:false '
         for tz in range (0,len(timeZoneToCheck)):
             agentSearch = agentSearch + 'tags:' + agentType + '_' + timeZoneToCheck[tz] + ' '
         agentSearchURL = basic_url+agentSearch
@@ -73,7 +77,10 @@ def main():
         agentDump = json.loads(json.dumps(getAgents.json()))
         if (agentDump['count']>0):
             for agentIndex in range(0,agentDump['count']):
-                availableAgents.append(agentDump['result'][agentIndex]['id'])
+                availableAgents.append(agentDump['results'][agentIndex]['id'])
+        print ('Available agents are: ')
+        for availIndex in range(0,len(availableAgents)):
+            print (availableAgents[availIndex])
         return availableAgents
     
     # searching last assignment of the agents
@@ -87,6 +94,9 @@ def main():
         c = conn1.cursor()
         for row in c.execute(query):
             orderofAgent.append(row[0])
+        print ('Final order of agents: ')
+        for final in range(0,len(orderofAgent)):
+            print (orderofAgent[final])
         conn1.close()
         return orderofAgent
     
@@ -100,15 +110,15 @@ def main():
     
     # assigning tickets to agent and update the ticket
     def assignTickets(finalOrder,finalTickets):
-        conn2 = sqlite3.connect('/Users/fajrihanny/Documents/Projects/support-autoassignment/autoassignment.db')
+        conn2 = sqlite3.connect('/Users/fajrihanny/Documents/gitfiles/support-autoassignment/autoassignment.db')
         d = conn2.cursor()
-        lastPos = 0
+        # lastPos = 0
         for ticketID in range(0,len(finalTickets)):
             updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
             agentToWorkWith = str(finalOrder[(ticketID%len(finalOrder))])
-            payloadTicket = {'ticket': {'status':'open', 'comment': {'body':'This ticket is being auto assigned','public':'false','author_id':'25264784308'}, 'assignee_id':agentToWorkWith}}
-            payloadJson = json.dumps(payload)
-            updateTicket = requests.put(updateTicketURL,headers=headersWithContentType, data=payloadJson)
+            payloadTicket = {'ticket': {'status':'open', 'comment': {'body':'This ticket has been auto-assigned','public':'false','author_id':'25264784308'}, 'assignee_id':agentToWorkWith}}
+            payloadJson = json.dumps(payloadTicket)
+            requests.put(updateTicketURL,headers=headersWithContentType, data=payloadJson)
             getAssignedTime = int(datetime.utcnow().timestamp())
             d.execute("update autoassignment SET last_at = ? where agent_id = ?", (getAssignedTime,agentToWorkWith))
             conn2.commit()
@@ -167,6 +177,7 @@ while 1:
 
 	# run the program every 10 minutes
 	# adding comment from code-refactoring branch
-    dt = datetime.datetime.now() + datetime.timedelta(minutes=10)
-    while datetime.datetime.now() < dt:
-        datetime.sleep(1)
+    dt = datetime.now() + timedelta(minutes=10)
+    # dt = datetime.now() + datetime.timedelta(minutes=10)
+    while datetime.now() < dt:
+        time.sleep(1)
