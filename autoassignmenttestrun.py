@@ -1,6 +1,5 @@
 # start of new autoassignment.py
 
-
 from datetime import datetime
 from datetime import timedelta
 import time
@@ -9,13 +8,12 @@ import json
 import requests
 import sqlite3
 
-
 # ALL CONSTANTS GO HERE 
 
 # zendesk basic url and queries
 basic_url = 'https://contentful.zendesk.com/api/v2/search.json?query='
 ticket_url = 'https://contentful.zendesk.com/api/v2/tickets/'
-unassignedTicketsQuery = 'type:ticket status<=pending assignee:none requester:fajri.hanny@contentful.com group:'
+unassignedTicketsQuery = 'type:ticket status<=pending assignee:none group:'
 
 # token and headers
 base64encodedtoken = 'ZmFqcmkuaGFu_bnlAY29udGVudGZ1bC5jb20vdG9rZW46dDA4VjVSSEVvSHFIejVNZG9GVmVaYUdZd2J1Mnh0M2FsNTduM0ZsbA=='
@@ -34,8 +32,6 @@ def main():
     availableTimeZone = []
     supportTicket = []
     opsTicket = []
-    # opsAgent = []
-    # supportAgent = []
 
 	# ALL METHODS GO HERE #
 
@@ -78,25 +74,19 @@ def main():
         if (agentDump['count']>0):
             for agentIndex in range(0,agentDump['count']):
                 availableAgents.append(agentDump['results'][agentIndex]['id'])
-        print ('Available agents are: ')
-        for availIndex in range(0,len(availableAgents)):
-            print (availableAgents[availIndex])
         return availableAgents
     
     # searching last assignment of the agents
     def getLastAssignment(agentType):
-        if agentType is 'support':
+        if agentType == 'support':
             query = "select agent_id from autoassignment where agent_type='support' order by last_at asc"
         else:
             query = "select agent_id from autoassignment where agent_type='ops' order by last_at asc"
-        conn1 = sqlite3.connect('/Users/fajrihanny/Documents/gitfiles/support-autoassignment/autoassignment.db')
+        conn1 = sqlite3.connect('/Users/fajrihanny/Documents/Projects/support-autoassignment/autoassignment.db')
         orderofAgent = []
         c = conn1.cursor()
         for row in c.execute(query):
             orderofAgent.append(row[0])
-        print ('Final order of agents: ')
-        for final in range(0,len(orderofAgent)):
-            print (orderofAgent[final])
         conn1.close()
         return orderofAgent
     
@@ -110,9 +100,8 @@ def main():
     
     # assigning tickets to agent and update the ticket
     def assignTickets(finalOrder,finalTickets):
-        conn2 = sqlite3.connect('/Users/fajrihanny/Documents/gitfiles/support-autoassignment/autoassignment.db')
+        conn2 = sqlite3.connect('/Users/fajrihanny/Documents/Projects/support-autoassignment/autoassignment.db')
         d = conn2.cursor()
-        # lastPos = 0
         for ticketID in range(0,len(finalTickets)):
             updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
             agentToWorkWith = str(finalOrder[(ticketID%len(finalOrder))])
