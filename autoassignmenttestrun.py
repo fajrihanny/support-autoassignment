@@ -105,7 +105,7 @@ def main():
         for ticketID in range(0,len(finalTickets)):
             updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
             agentToWorkWith = str(finalOrder[(ticketID%len(finalOrder))])
-            payloadTicket = {'ticket': {'status':'open', 'comment': {'body':'This ticket has been auto-assigned','public':'false','author_id':'25264784308'}, 'assignee_id':agentToWorkWith}}
+            payloadTicket = {'ticket': {'comment': {'body':'This ticket has been auto-assigned','public':'false','author_id':'25264784308'}, 'assignee_id':agentToWorkWith}}
             payloadJson = json.dumps(payloadTicket)
             requests.put(updateTicketURL,headers=headersWithContentType, data=payloadJson)
             getAssignedTime = int(datetime.utcnow().timestamp())
