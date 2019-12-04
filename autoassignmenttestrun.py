@@ -53,14 +53,18 @@ def main():
     # getting current time zone
     def getCurrentTimeZone():
         tz_BER = datetime.now(timezone('Europe/Berlin')).hour
+        print ('Berlin time: ', tz_BER)
         tz_SF = datetime.now(timezone('America/Los_Angeles')).hour
+        print ('San Fransisco time : ', tz_SF)
         tz_NZ = datetime.now(timezone('Pacific/Auckland')).hour
-        if (tz_BER >= startTime and tz_BER <= endTime):
+        print ('New Zealand time : ', tz_NZ)
+        if (tz_BER >= startTime and tz_BER <= endTime):ß
             availableTimeZone.append('berlin')
         if (tz_NZ >= startTime and tz_NZ <= endTime):
             availableTimeZone.append('nz')
         if (tz_SF >= startTime and tz_SF <= endTime):
             availableTimeZone.append('sf')
+        print ('Working timezone: ',availableTimeZone)
 
     # searching available agents based on timezones using user tags
     def getAvailableAgents(timeZoneToCheck,agentType):
@@ -102,10 +106,13 @@ def main():
     def assignTickets(finalOrder,finalTickets):
         conn2 = sqlite3.connect('/Users/fajrihanny/Documents/Projects/support-autoassignment/autoassignment.db')
         d = conn2.cursor()
+        agentName = []
         for ticketID in range(0,len(finalTickets)):
             updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
             agentToWorkWith = str(finalOrder[(ticketID%len(finalOrder))])
-            payloadTicket = {'ticket': {'comment': {'body':'This ticket has been auto-assigned','public':'false','author_id':'25264784308'}, 'assignee_id':agentToWorkWith}}
+            for row in d.execute("select agent_name from autoassignment where agent_id = ?",(agentToWorkWith,)):
+                agentName.append(row[0])
+            payloadTicket = {'ticket': {'comment': {'body':'This ticket has been auto-assigned to '+agentName[0],'public':'false','author_id':'25264784308'}, 'assignee_id':agentToWorkWith}}
             payloadJson = json.dumps(payloadTicket)
             requests.put(updateTicketURL,headers=headersWithContentType, data=payloadJson)
             getAssignedTime = int(datetime.utcnow().timestamp())
@@ -131,12 +138,15 @@ def main():
                 finalSupportOrder = []
                 print ('Starting distribution for Support tickets')
                 availSupport = getAvailableAgents(availableTimeZone,'support')
-                # 4. Get the last assignments of the agent and order them 
-                orderSupport = getLastAssignment('support')
-                # 5. Get the final order
-                finalSupportOrder = getOrderAgent(orderSupport,availSupport)
-                # 6. Assign the ticket to the agents, save the assignment time, and update the ticket with message from bot
-                assignTickets(finalSupportOrder,supportTicket)
+                if (len(availSupport)>0):
+                    # 4. Get the last assignments of the agent and order them 
+                    orderSupport = getLastAssignment('support')
+                    # 5. Get the final order
+                    finalSupportOrder = getOrderAgent(orderSupport,availSupport)
+                    # 6. Assign the ticket to the agents, save the assignment time, and update the ticket with message from bot
+                    assignTickets(finalSupportOrder,supportTicket)
+                else:
+                    print ('No available support agents during this timezone')
                 # 7. Post update to Slack channel with the name of the agent
             else:
                 print ('No unassigned support tickets to distribute')
@@ -146,13 +156,16 @@ def main():
                 finalOpsOrder = []
                 print ('Starting distribution for Ops tickets')
                 availOps = getAvailableAgents(availableTimeZone,'ops')
-                # 4. Get the last assignments of the agent and order them
-                orderOps = getLastAssignment('ops')  
-                # 5. Get the final order 
-                finalOpsOrder = getOrderAgent(orderOps,availOps)      
-                # 6. Assign the ticket to the agents, save the assignment time, and update the ticket with message from bot
-                assignTickets(finalOpsOrder,opsTicket)
-                # 7. Update the ticket and post update to Slack channel with the name of the agent
+                if (len(availOps)>0):
+                    # 4. Get the last assignments of the agent and order them
+                    orderOps = getLastAssignment('ops')  
+                    # 5. Get the final order 
+                    finalOpsOrder = getOrderAgent(orderOps,availOps)      
+                    # 6. Assign the ticket to the agents, save the assignment time, and update the ticket with message from bot
+                    assignTickets(finalOpsOrder,opsTicket)
+                    # 7. Update the ticket and post update to Slack channel with the name of the agent
+                else:
+                    print ('No available ops agents during this timezone')
             else:
                 print ('No unassigned ops tickets to distribute')
         else:

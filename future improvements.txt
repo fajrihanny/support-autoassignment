@@ -1,0 +1,5 @@
+Future Improvements
+- Don't run the script over the weekend (something needs to be discussed first)
+- Post updates over at Slack (too many noise?)
+- Internal note with the agent name
+- Possible to run across Engineering team tickets as well? (Still a lot of tickets go to groups instead of agent e.g Engineering Support instead of Engineering Support/Engineering Support)
