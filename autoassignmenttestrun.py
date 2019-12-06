@@ -58,7 +58,7 @@ def main():
         print ('San Fransisco time : ', tz_SF)
         tz_NZ = datetime.now(timezone('Pacific/Auckland')).hour
         print ('New Zealand time : ', tz_NZ)
-        if (tz_BER >= startTime and tz_BER <= endTime):ß
+        if (tz_BER >= startTime and tz_BER <= endTime):
             availableTimeZone.append('berlin')
         if (tz_NZ >= startTime and tz_NZ <= endTime):
             availableTimeZone.append('nz')
@@ -86,7 +86,7 @@ def main():
             query = "select agent_id from autoassignment where agent_type='support' order by last_at asc"
         else:
             query = "select agent_id from autoassignment where agent_type='ops' order by last_at asc"
-        conn1 = sqlite3.connect('/Users/fajrihanny/Documents/Projects/support-autoassignment/autoassignment.db')
+        conn1 = sqlite3.connect('/Users/fajrihanny/Documents/gitfiles/support-autoassignment/autoassignment.db')
         orderofAgent = []
         c = conn1.cursor()
         for row in c.execute(query):
@@ -104,12 +104,17 @@ def main():
     
     # assigning tickets to agent and update the ticket
     def assignTickets(finalOrder,finalTickets):
-        conn2 = sqlite3.connect('/Users/fajrihanny/Documents/Projects/support-autoassignment/autoassignment.db')
+        conn2 = sqlite3.connect('/Users/fajrihanny/Documents/gitfiles/support-autoassignment/autoassignment.db')
         d = conn2.cursor()
-        agentName = []
+        # agentName = []
         for ticketID in range(0,len(finalTickets)):
             updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
             agentToWorkWith = str(finalOrder[(ticketID%len(finalOrder))])
+<<<<<<< HEAD
+=======
+            # for row in d.execute("select agent_name from autoassignment where agent_id = ?",(agentToWorkWith,)):
+                # agentName.append(row[0])
+>>>>>>> f2002e365be5329a41c8924f3c4398f5937a5be4
             payloadTicket = {'ticket': {'comment': {'body':'This ticket has been auto-assigned','public':'false','author_id':'25264784308'}, 'assignee_id':agentToWorkWith}}
             payloadJson = json.dumps(payloadTicket)
             requests.put(updateTicketURL,headers=headersWithContentType, data=payloadJson)
