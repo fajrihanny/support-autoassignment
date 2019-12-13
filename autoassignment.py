@@ -86,7 +86,7 @@ def main():
             query = "select agent_id from autoassignment where agent_type='support' order by last_at asc"
         else:
             query = "select agent_id from autoassignment where agent_type='ops' order by last_at asc"
-        conn1 = sqlite3.connect('/Users/fajrihanny/Documents/Projects/support-autoassignment/autoassignment.db')
+        conn1 = sqlite3.connect('/Users/fajrihanny/Documents/gitfiles/support-autoassignment/autoassignment.db')
         orderofAgent = []
         c = conn1.cursor()
         for row in c.execute(query):
@@ -104,13 +104,15 @@ def main():
     
     # assigning tickets to agent and update the ticket
     def assignTickets(finalOrder,finalTickets):
-        conn2 = sqlite3.connect('/Users/fajrihanny/Documents/Projects/support-autoassignment/autoassignment.db')
+        conn2 = sqlite3.connect('/Users/fajrihanny/Documents/gitfiles/support-autoassignment/autoassignment.db')
         d = conn2.cursor()
         # agentName = []
         for ticketID in range(0,len(finalTickets)):
+            print ('Ticket ID to assign : '+str(finalTickets[ticketID]))
             updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
-            agentToWorkWith = str(finalOrder[(ticketID%len(finalOrder))])
-            payloadTicket = {'ticket': {'comment': {'body':'This ticket has been auto-assigned','public':'false','author_id':'25264784308'}, 'assignee_id':agentToWorkWith}}
+            agentToWorkWith = ticketID%len(finalOrder)
+            print ('Agent to be assigned : '+str(finalOrder[agentToWorkWith]))
+            payloadTicket = {'ticket': {'comment': {'body':'This ticket has been auto-assigned','public':'false','author_id':'25264784308'}, 'assignee_id':finalOrder[agentToWorkWith]}}
             payloadJson = json.dumps(payloadTicket)
             requests.put(updateTicketURL,headers=headersWithContentType, data=payloadJson)
             getAssignedTime = int(datetime.utcnow().timestamp())
@@ -137,10 +139,12 @@ def main():
                 print ('Starting distribution for Support tickets')
                 availSupport = getAvailableAgents(availableTimeZone,'support')
                 if (len(availSupport)>0):
+                    # print ('Available agents in : '+availableTimeZone+' , '+availSupport)
                     # 4. Get the last assignments of the agent and order them 
                     orderSupport = getLastAssignment('support')
                     # 5. Get the final order
                     finalSupportOrder = getOrderAgent(orderSupport,availSupport)
+                    # print ('Final order of the agent : '+finalSupportOrder)
                     # 6. Assign the ticket to the agents, save the assignment time, and update the ticket with message from bot
                     assignTickets(finalSupportOrder,supportTicket)
                 else:
