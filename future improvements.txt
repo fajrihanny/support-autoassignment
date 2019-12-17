@@ -3,3 +3,7 @@ Future Improvements
 - Post updates over at Slack (too many noise?)
 - Internal note with the agent name
 - Possible to run across Engineering team tickets as well? (Still a lot of tickets go to groups instead of agent e.g Engineering Support instead of Engineering Support/Engineering Support)
+- Save the log into a file
+- Relative path to the database
+- Putting timestamp on the time of checking unassigned tickets
+- 
