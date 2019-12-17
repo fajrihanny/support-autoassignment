@@ -37,6 +37,7 @@ def main():
 
     # get unassigned tickets
     def getUnassignedTickets():
+        print('Program starts : '+datetime.now().strftime(("%Y-%m-%d %H:%M:%S")))
         unassignedTicketsSupportresponse = requests.get(basic_url+unassignedTicketsQuery+group_id_support,headers=headers)
         unassignedTicketsOpsresponse = requests.get(basic_url+unassignedTicketsQuery+group_id_ops,headers=headers)
         supportDump = json.loads(json.dumps(unassignedTicketsSupportresponse.json()))
@@ -78,6 +79,7 @@ def main():
         if (agentDump['count']>0):
             for agentIndex in range(0,agentDump['count']):
                 availableAgents.append(agentDump['results'][agentIndex]['id'])
+        print('Available agents in : '+str(timeZoneToCheck)+' are '+str(availableAgents))
         return availableAgents
     
     # searching last assignment of the agents
@@ -91,11 +93,12 @@ def main():
         c = conn1.cursor()
         for row in c.execute(query):
             orderofAgent.append(row[0])
+        print('Order of '+str(agentType)+' agent : '+str(orderofAgent))
         conn1.close()
         return orderofAgent
     
     # getting the final order of the agents
-    def getOrderAgent(agents,order):
+    def getOrderAgent(order,agents):
         finalAgentOrder = []
         for agentOrder in range (0,len(order)):
             if order[agentOrder] in agents:
@@ -106,17 +109,15 @@ def main():
     def assignTickets(finalOrder,finalTickets):
         conn2 = sqlite3.connect('/Users/fajrihanny/Documents/gitfiles/support-autoassignment/autoassignment.db')
         d = conn2.cursor()
-        # agentName = []
         for ticketID in range(0,len(finalTickets)):
-            print ('Ticket ID to assign : '+str(finalTickets[ticketID]))
+            getAssignedTime = int(datetime.utcnow().timestamp())
             updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
             agentToWorkWith = ticketID%len(finalOrder)
-            print ('Agent to be assigned : '+str(finalOrder[agentToWorkWith]))
+            print('Ticket '+str(finalTickets[ticketID])+ ' is assigned to '+str(finalOrder[agentToWorkWith])+ ' at '+str(getAssignedTime))
             payloadTicket = {'ticket': {'comment': {'body':'This ticket has been auto-assigned','public':'false','author_id':'25264784308'}, 'assignee_id':finalOrder[agentToWorkWith]}}
             payloadJson = json.dumps(payloadTicket)
             requests.put(updateTicketURL,headers=headersWithContentType, data=payloadJson)
-            getAssignedTime = int(datetime.utcnow().timestamp())
-            d.execute("update autoassignment SET last_at = ? where agent_id = ?", (getAssignedTime,agentToWorkWith))
+            d.execute("update autoassignment SET last_at = ? where agent_id = ?", (getAssignedTime,finalOrder[agentToWorkWith]))
             conn2.commit()
         conn2.close()
 
