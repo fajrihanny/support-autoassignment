@@ -8,7 +8,7 @@ import json
 import requests
 import sqlite3
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+# from requests.packages.urllib3.util.retry import Retry
 
 # https://stackoverflow.com/a/47475019
 
