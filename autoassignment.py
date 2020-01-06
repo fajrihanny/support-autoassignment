@@ -53,17 +53,23 @@ def main():
     
     # getting current time zone
     def getCurrentTimeZone():
-        tz_BER = datetime.now(timezone('Europe/Berlin')).hour
+        timeBER = datetime.now(timezone('Europe/Berlin'))
+        timeSF = datetime.now(timezone('America/Los_Angeles'))
+        timeNZ = datetime.now(timezone('Pacific/Auckland'))
+        tz_BER = timeBER.hour
+        isBerlinWeekday = datetime.isoweekday(timeBER)
         print ('Berlin time: ', tz_BER)
-        tz_SF = datetime.now(timezone('America/Los_Angeles')).hour
+        tz_SF = timeSF.hour
+        isSFWeekday = datetime.isoweekday(timeSF)
         print ('San Fransisco time : ', tz_SF)
-        tz_NZ = datetime.now(timezone('Pacific/Auckland')).hour
+        tz_NZ = timeNZ.hour
+        isNZWeekday = datetime.isoweekday(timeNZ)
         print ('New Zealand time : ', tz_NZ)
-        if (tz_BER >= startTime and tz_BER <= endTime):
+        if (tz_BER >= startTime and tz_BER <= endTime) and (isBerlinWeekday < 6):
             availableTimeZone.append('berlin')
-        if (tz_NZ >= startTime and tz_NZ <= endTime):
+        if (tz_NZ >= startTime and tz_NZ <= endTime) and (isNZWeekday < 6):
             availableTimeZone.append('nz')
-        if (tz_SF >= startTime and tz_SF <= endTime):
+        if (tz_SF >= startTime and tz_SF <= endTime) and (isSFWeekday < 6):
             availableTimeZone.append('sf')
         print ('Working timezone: ',availableTimeZone)
 
