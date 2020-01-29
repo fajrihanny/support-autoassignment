@@ -27,6 +27,8 @@ headersWithContentType = {'Authorization':'Basic '+base64encodedtoken,'Content-T
 # zendesk groups
 group_id_ops = '360000168347'
 group_id_support = '20917813'
+ops_switchoff = False
+support_switchoff = False
 
 # variables for timezone
 startTime = 8
@@ -143,7 +145,7 @@ def main():
         if (len(availableTimeZone)>0):
             print ('Getting available agents..')
             # 3. Get the available agents based (param:available time zone from no 2)
-            if (len(supportTicket)>0):
+            if (len(supportTicket)>0 and support_switchoff ==  False):
                 orderSupport = []
                 availSupport = []
                 finalSupportOrder = []
@@ -163,7 +165,7 @@ def main():
                 # 7. Post update to Slack channel with the name of the agent
             else:
                 print ('No unassigned support tickets to distribute')
-            if (len(opsTicket)>0):
+            if (len(opsTicket)>0 and ops_switchoff == False):
                 orderOps = []
                 availOps = []
                 finalOpsOrder = []
