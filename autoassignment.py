@@ -1,145 +1,198 @@
-import requests
-import json
-import datetime
-import sqlite3
+# start of new autoassignment.py
+
+from datetime import datetime
+from datetime import timedelta
 import time
+from pytz import timezone
+import json
+import requests
+import sqlite3
+from requests.adapters import HTTPAdapter
+# from requests.packages.urllib3.util.retry import Retry
+
+# ALL CONSTANTS GO HERE 
+
+# zendesk basic url and queries
+basic_url = 'https://contentful.zendesk.com/api/v2/search.json?query='
+ticket_url = 'https://contentful.zendesk.com/api/v2/tickets/'
+unassignedTicketsQuery = 'type:ticket status<=pending assignee:none group:'
+
+# token and headers
+base64encodedtoken = 'ZmFqcmkuaGFu_bnlAY29udGVudGZ1bC5jb20vdG9rZW46dDA4VjVSSEVvSHFIejVNZG9GVmVaYUdZd2J1Mnh0M2FsNTduM0ZsbA=='
+headers = {'Authorization':'Basic '+base64encodedtoken}
+headersWithContentType = {'Authorization':'Basic '+base64encodedtoken,'Content-Type':'application/json'}
+
+# zendesk groups
+group_id_ops = '360000168347'
+group_id_support = '20917813'
+ops_switchoff = False
+support_switchoff = False
+
+# variables for timezone
+startTime = 8
+endTime = 17
 
 def main():
-	# schedule construction - all in UTC timezone
-	print 'Starting the program .. '
-	startBerlin = datetime.time(6,0,0)
-	endBerlin = datetime.time(14,0,0)
+    availableTimeZone = []
+    supportTicket = []
+    opsTicket = []
 
-	startAuckland = datetime.time(18,0)
-	endAuckland = datetime.time(2,0)
+	# ALL METHODS GO HERE #
 
-	startSaoPaolo = datetime.time(11,0)
-	endSaoPaolo = datetime.time(19,0)
+    # get unassigned tickets
+    def getUnassignedTickets():
+        print('Program starts : '+datetime.now().strftime(("%Y-%m-%d %H:%M:%S")))
+        unassignedTicketsSupportresponse = requests.get(basic_url+unassignedTicketsQuery+group_id_support,headers=headers)
+        unassignedTicketsOpsresponse = requests.get(basic_url+unassignedTicketsQuery+group_id_ops,headers=headers)
+        supportDump = json.loads(json.dumps(unassignedTicketsSupportresponse.json()))
+        opsDump = json.loads(json.dumps(unassignedTicketsOpsresponse.json()))
+        if (len(supportDump['results']) > 0):
+            print (str(len(supportDump['results']))+' support tickets are found')
+            for ticket in range (0,len(supportDump['results'])):
+                supportTicket.append(supportDump['results'][ticket]['id'])
+        if (len(opsDump['results']) > 0):
+            print (str(len(opsDump['results']))+' ops tickets are found')
+            for ticket in range (0,len(opsDump['results'])):
+                opsTicket.append(opsDump['results'][ticket]['id'])
+    
+    # getting current time zone
+    def getCurrentTimeZone():
+        timeBER = datetime.now(timezone('Europe/Berlin'))
+        timeSF = datetime.now(timezone('America/Los_Angeles'))
+        timeNZ = datetime.now(timezone('Pacific/Auckland'))
+        tz_BER = timeBER.hour
+        isBerlinWeekday = datetime.isoweekday(timeBER)
+        print ('Berlin time: ', tz_BER)
+        tz_SF = timeSF.hour
+        isSFWeekday = datetime.isoweekday(timeSF)
+        print ('San Fransisco time : ', tz_SF)
+        tz_NZ = timeNZ.hour
+        isNZWeekday = datetime.isoweekday(timeNZ)
+        print ('New Zealand time : ', tz_NZ)
+        if (tz_BER >= startTime and tz_BER <= endTime) and (isBerlinWeekday < 6):
+            availableTimeZone.append('berlin')
+        if (tz_NZ >= startTime and tz_NZ <= endTime) and (isNZWeekday < 6):
+            availableTimeZone.append('nz')
+        if (tz_SF >= startTime and tz_SF <= endTime) and (isSFWeekday < 6):
+            availableTimeZone.append('sf')
+        print ('Working timezone: ',availableTimeZone)
 
-	startSanFransisco
-	endSanFransisco
+    # searching available agents based on timezones using user tags
+    def getAvailableAgents(timeZoneToCheck,agentType):
+        availableAgents = []
+        agentSearch = 'type:user agent_ooo:false '
+        for tz in range (0,len(timeZoneToCheck)):
+            agentSearch = agentSearch + 'tags:' + agentType + '_' + timeZoneToCheck[tz] + ' '
+        agentSearchURL = basic_url+agentSearch
+        getAgents = requests.get(agentSearchURL,headers=headers)
+        agentDump = json.loads(json.dumps(getAgents.json()))
+        if (agentDump['count']>0):
+            for agentIndex in range(0,agentDump['count']):
+                availableAgents.append(agentDump['results'][agentIndex]['id'])
+        print('Available agents in : '+str(timeZoneToCheck)+' are '+str(availableAgents))
+        return availableAgents
+    
+    # searching last assignment of the agents
+    def getLastAssignment(agentType):
+        if agentType == 'support':
+            query = "select agent_id from autoassignment where agent_type='support' order by last_at asc"
+        else:
+            query = "select agent_id from autoassignment where agent_type='ops' order by last_at asc"
+        conn1 = sqlite3.connect('/Users/fajrihanny/Documents/gitfiles/support-autoassignment/autoassignment.db')
+        orderofAgent = []
+        c = conn1.cursor()
+        for row in c.execute(query):
+            orderofAgent.append(row[0])
+        print('Order of '+str(agentType)+' agent : '+str(orderofAgent))
+        conn1.close()
+        return orderofAgent
+    
+    # getting the final order of the agents
+    def getOrderAgent(order,agents):
+        finalAgentOrder = []
+        for agentOrder in range (0,len(order)):
+            if order[agentOrder] in agents:
+                finalAgentOrder.append(order[agentOrder])
+        return finalAgentOrder
+    
+    # assigning tickets to agent and update the ticket
+    def assignTickets(finalOrder,finalTickets):
+        conn2 = sqlite3.connect('/Users/fajrihanny/Documents/gitfiles/support-autoassignment/autoassignment.db')
+        d = conn2.cursor()
+        for ticketID in range(0,len(finalTickets)):
+            getAssignedTime = int(datetime.utcnow().timestamp())
+            updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
+            agentToWorkWith = ticketID%len(finalOrder)
+            print('Ticket '+str(finalTickets[ticketID])+ ' is assigned to '+str(finalOrder[agentToWorkWith])+ ' at '+str(getAssignedTime))
+            payloadTicket = {'ticket': {'comment': {'body':'This ticket has been auto-assigned','public':'false','author_id':'25264784308'}, 'assignee_id':finalOrder[agentToWorkWith]}}
+            payloadJson = json.dumps(payloadTicket)
+            requests.put(updateTicketURL,headers=headersWithContentType, data=payloadJson)
+            d.execute("update autoassignment SET last_at = ? where agent_id = ?", (getAssignedTime,finalOrder[agentToWorkWith]))
+            conn2.commit()
+        conn2.close()
 
-	# prepare the basic parameters
-	conn = sqlite3.connect('/Users/fajrihanny/Documents/autoassignment/autoassignment.db')
-	availableAgentURL = 'https://contentful.zendesk.com/api/v2/search.json?query=type:user agent_ooo:false group:20917813 role:agent'
-	url = 'https://contentful.zendesk.com/api/v2/search.json?query=type:ticket status<=pending assignee:none group:Support Group requester:fajri.hanny@contentful.com'
-	headers = {'Authorization':'Basic ZmFqcmkuaGFu_bnlAY29udGVudGZ1bC5jb20vdG9rZW46dDA4VjVSSEVvSHFIejVNZG9GVmVaYUdZd2J1Mnh0M2FsNTduM0ZsbA=='}
-	headersContentType = {'Authorization':'Basic ZmFqcmkuaGFubnlAY29udGVudGZ1bC5jb20vdG9rZW46dDA4VjVSSEVvSHFIejVNZG9GVmVaYUdZd2J1Mnh0M2FsNTduM0ZsbA==','Content-Type':'application/json'}
+    # posting updates on Slack (later development)
 
-	# retrieve last date time assignment for each agent
-	print 'Retrieve all the agents .. '
-	orderofAgent = []
-	c = conn.cursor()
-	for row in c.execute("SELECT AGENT_ID FROM AGENT_ASSIGNMENT order by LAST_ASSIGNMENT ASC"):
-		orderofAgent.append(row[0])
-	print "Order of agent based on last date time assignment: "
-	for index in range (0,len(orderofAgent)):
-		print(orderofAgent[index])
+	# MAIN LOGIC IS HERE # 
 
-
-	# get all agents - make a request to Zendesk
-	print 'Retrieve all available agents .. '
-	availableAgents = requests.get(availableAgentURL,headers=headers)
-	agentData = availableAgents.json()
-	agentDataString = json.dumps(agentData)
-	agentDataDump = json.loads(agentDataString)
-	numberofAgent = len(agentDataDump['results'])
-
-	# get current time
-	currentTime = datetime.datetime.utcnow().time()
-
-	# get the current timezone of agent that can be assigned tickets
-	def isTimeBetween(startTime,endTime):
-		if startTime < endTime:
-			return currentTime >= startTime and currentTime <= endTime
-		else:
-			return currentTime >= startTime or currentTime <= endTime
-
-	print 'Retrieve all the schedules available .. '
-	tagSchedule = []
-	if (isTimeBetween(startBerlin,endBerlin)):
-		tagSchedule.append('Berlin')
-	if (isTimeBetween(startSaoPaolo,endSaoPaolo)):
-		tagSchedule.append('Sao Paolo')
-	if (isTimeBetween(startAuckland,endAuckland)):
-		tagSchedule.append('Auckland')
-
-	print "Available timezone: " 
-	for index in range (0,len(tagSchedule)):
-		print(tagSchedule[index])
-
-	# get available agent's ID based on the current time
-	print 'Retrieve all agents availabled for the time zone(s) .. '
-	finalAvailableAgent = []
-	for agent in range (0,numberofAgent): # number of agent = 4
-		agentTimezone = str((agentDataDump['results'][agent]['time_zone'])) # get agent's timezone
-		agentName = str(agentDataDump['results'][agent]['name']) # get agent's name
-		for index in range(0,len(tagSchedule)): # Auckland = 1
-			if(str(tagSchedule[index]) == agentTimezone):
-				finalAvailableAgent.append(agentDataDump['results'][agent]['id'])
-	
-	print "Available agent based on timezone: " 
-	for index in range (0,len(finalAvailableAgent)):
-		print(finalAvailableAgent[index])
-
-	# check which agent needs to be assigned based on the last assignment time based
-	print 'Getting the final order of the agent .. '
-	finalAgentOrder = []
-	for agentOrder in range (0,len(orderofAgent)):
-		if orderofAgent[agentOrder] in finalAvailableAgent:
-			finalAgentOrder.append(orderofAgent[agentOrder])
-	print "Final Agent Order: " 
-	for index in range (0,len(finalAgentOrder)):
-		print(finalAgentOrder[index])
-
-	# Get all the unassigned tickets and assign them to the available agents
-	print 'Getting all the unassigned tickets .. '
-	response = requests.get(url,headers=headers)
-	newTicket = response.json()
-	newTicketString = json.dumps(newTicket)
-	newTicketDump = json.loads(newTicketString)
-	numberOfTickets = len(newTicketDump['results'])
-
-	# assigning ticket to available agent
-	lastPosition = 0
-	if(numberOfTickets>0):
-		print 'Number of new unassigned tickets: ' + str(numberOfTickets) + ' tickets' 
-		print 'Assigning tickets to agents .. '
-		for ticket in range (0,numberOfTickets):
-			updateTicketURL = 'https://contentful.zendesk.com/api/v2/tickets/'+str(newTicketDump['results'][ticket]['id'])+'.json'
-		 	for agentIndex in range(lastPosition,len(finalAgentOrder)):
-		 		assignedAgent = str(finalAgentOrder[agentIndex])
-		 		payload = {'ticket': {'status':'open', 'comment': {'body':'This ticket is being auto assigned','public':'false','author_id':'25264784308'}, 'assignee_id':assignedAgent}}
-		 		payloadJson = json.dumps(payload)
-		 		updateTicket = requests.put(updateTicketURL,headers=headersContentType, data=payloadJson)
-		 		getCurrentTime = datetime.datetime.utcnow()
-				assignmentTime = getCurrentTime.strftime('%s')
-				assignmentTimeinInt = int(assignmentTime)
-		 		c.execute("UPDATE AGENT_ASSIGNMENT SET LAST_ASSIGNMENT = ? WHERE AGENT_ID = ?", (assignmentTimeinInt,assignedAgent))
-				conn.commit()
-		 		if(agentIndex == len(finalAgentOrder)-1):
-		 			lastPosition = 0
-		 		else:
-		 			lastPosition = agent_to_assign + 1
-		 		break
-	else:
-		print 'No new tickets to assign'
-
-	conn.close()
-	return;
+    # 1. Get the tickets to distribute from both groups - Ops and Support Group.
+    getUnassignedTickets()
+    if (len(supportTicket)>0 or len(opsTicket)>0):
+		# 2. Get the current time zone(s)
+        getCurrentTimeZone()
+        if (len(availableTimeZone)>0):
+            print ('Getting available agents..')
+            # 3. Get the available agents based (param:available time zone from no 2)
+            if (len(supportTicket)>0 and support_switchoff ==  False):
+                orderSupport = []
+                availSupport = []
+                finalSupportOrder = []
+                print ('Starting distribution for Support tickets')
+                availSupport = getAvailableAgents(availableTimeZone,'support')
+                if (len(availSupport)>0):
+                    # print ('Available agents in : '+availableTimeZone+' , '+availSupport)
+                    # 4. Get the last assignments of the agent and order them 
+                    orderSupport = getLastAssignment('support')
+                    # 5. Get the final order
+                    finalSupportOrder = getOrderAgent(orderSupport,availSupport)
+                    # print ('Final order of the agent : '+finalSupportOrder)
+                    # 6. Assign the ticket to the agents, save the assignment time, and update the ticket with message from bot
+                    assignTickets(finalSupportOrder,supportTicket)
+                else:
+                    print ('No available support agents during this timezone')
+                # 7. Post update to Slack channel with the name of the agent
+            else:
+                print ('No unassigned support tickets to distribute')
+            if (len(opsTicket)>0 and ops_switchoff == False):
+                orderOps = []
+                availOps = []
+                finalOpsOrder = []
+                print ('Starting distribution for Ops tickets')
+                availOps = getAvailableAgents(availableTimeZone,'ops')
+                if (len(availOps)>0):
+                    # 4. Get the last assignments of the agent and order them
+                    orderOps = getLastAssignment('ops')  
+                    # 5. Get the final order 
+                    finalOpsOrder = getOrderAgent(orderOps,availOps)      
+                    # 6. Assign the ticket to the agents, save the assignment time, and update the ticket with message from bot
+                    assignTickets(finalOpsOrder,opsTicket)
+                    # 7. Update the ticket and post update to Slack channel with the name of the agent
+                else:
+                    print ('No available ops agents during this timezone')
+            else:
+                print ('No unassigned ops tickets to distribute')
+        else:
+            print ('No active time zone')
+    else:
+        print ('No unassigned tickets to distribute')
 
 while 1:
+    if __name__== "__main__":
+        main()
 
-	if __name__== "__main__":
-		main()
-
-	# run the program every 5 minutes
+	# run the program every 10 minutes
 	# adding comment from code-refactoring branch
-	dt = datetime.datetime.now() + datetime.timedelta(minutes=5)
-
-	while datetime.datetime.now() < dt:
-		time.sleep(1)
-
-
-
-
+    dt = datetime.now() + timedelta(minutes=10)
+    # dt = datetime.now() + datetime.timedelta(minutes=10)
+    while datetime.now() < dt:
+        time.sleep(1)
