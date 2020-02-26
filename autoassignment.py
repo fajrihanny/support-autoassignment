@@ -98,7 +98,8 @@ def main():
             query = "select agent_id from autoassignment where agent_type='support' order by last_at asc"
         else:
             query = "select agent_id from autoassignment where agent_type='ops' order by last_at asc"
-        conn1 = sqlite3.connect('/Users/fajrihanny/Documents/gitfiles/support-autoassignment/autoassignment.db')
+        # conn1 = sqlite3.connect('/Users/fajrihanny/Documents/Projects/support-autoassignment/autoassignment.db')
+        conn1 = sqlite3.connect('./autoassignment.db')
         orderofAgent = []
         c = conn1.cursor()
         for row in c.execute(query):
@@ -117,21 +118,31 @@ def main():
     
     # assigning tickets to agent and update the ticket
     def assignTickets(finalOrder,finalTickets):
-        conn2 = sqlite3.connect('/Users/fajrihanny/Documents/gitfiles/support-autoassignment/autoassignment.db')
+        # conn2 = sqlite3.connect('/Users/fajrihanny/Documents/Projects/support-autoassignment/autoassignment.db')
+        conn2 = sqlite3.connect('./autoassignment.db')
         d = conn2.cursor()
         for ticketID in range(0,len(finalTickets)):
             getAssignedTime = int(datetime.utcnow().timestamp())
-            updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
             agentToWorkWith = ticketID%len(finalOrder)
-            print('Ticket '+str(finalTickets[ticketID])+ ' is assigned to '+str(finalOrder[agentToWorkWith])+ ' at '+str(getAssignedTime))
-            payloadTicket = {'ticket': {'comment': {'body':'This ticket has been auto-assigned','public':'false','author_id':'25264784308'}, 'assignee_id':finalOrder[agentToWorkWith]}}
+            updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
+            auditTicketURL = ticket_url+str(finalTickets[ticketID])+'/audits.json'
+            ticketAudit = requests.get(auditTicketURL,headers=headers)
+            ticketDetails = requests.get(updateTicketURL,headers=headers)
+            requesterEmail = ticketDetails.json()['ticket']['via']['source']['from']['address']
+            location = str(ticketAudit.json()['audits'][0]['metadata']['system']['location'])
+            ticketComment = 'This ticket coming from ' + location + ' has been auto-assigned'
+            print('Ticket '+str(finalTickets[ticketID])+ ' coming from '+ location + ' is assigned to '+str(finalOrder[agentToWorkWith])+ ' at '+str(getAssignedTime))
+            if ('contentful.com' in requesterEmail):
+                collaboratorList = ticketDetails.json()['ticket']['collaborator_ids']
+                requesterID = collaboratorList[0]
+            else:
+                requesterID = ticketDetails.json()['ticket']['requester_id']
+            payloadTicket = {'ticket': {'comment': {'body':ticketComment,'public':'false','author_id':'25264784308'}, 'requester_id':requesterID, 'assignee_id':finalOrder[agentToWorkWith]}}
             payloadJson = json.dumps(payloadTicket)
             requests.put(updateTicketURL,headers=headersWithContentType, data=payloadJson)
             d.execute("update autoassignment SET last_at = ? where agent_id = ?", (getAssignedTime,finalOrder[agentToWorkWith]))
             conn2.commit()
         conn2.close()
-
-    # posting updates on Slack (later development)
 
 	# MAIN LOGIC IS HERE # 
 
