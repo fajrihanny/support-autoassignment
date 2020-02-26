@@ -125,24 +125,28 @@ def main():
             getAssignedTime = int(datetime.utcnow().timestamp())
             agentToWorkWith = ticketID%len(finalOrder)
             updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
-            auditTicketURL = ticket_url+str(finalTickets[ticketID])+'/audits.json'
-            ticketAudit = requests.get(auditTicketURL,headers=headers)
-            ticketDetails = requests.get(updateTicketURL,headers=headers)
-            requesterEmail = ticketDetails.json()['ticket']['via']['source']['from']['address']
-            location = str(ticketAudit.json()['audits'][0]['metadata']['system']['location'])
-            ticketComment = 'This ticket coming from ' + location + ' has been auto-assigned'
-            print('Ticket '+str(finalTickets[ticketID])+ ' coming from '+ location + ' is assigned to '+str(finalOrder[agentToWorkWith])+ ' at '+str(getAssignedTime))
-            if ('contentful.com' in requesterEmail):
-                collaboratorList = ticketDetails.json()['ticket']['collaborator_ids']
-                requesterID = collaboratorList[0]
+            location = getLocation(finalTickets[ticketID])
+            if (location == 'None'):
+                ticketComment = 'This ticket has been auto-assigned'
             else:
-                requesterID = ticketDetails.json()['ticket']['requester_id']
-            payloadTicket = {'ticket': {'comment': {'body':ticketComment,'public':'false','author_id':'25264784308'}, 'requester_id':requesterID, 'assignee_id':finalOrder[agentToWorkWith]}}
+                ticketComment = 'This ticket coming from ' + location + ' and has been auto-assigned'
+            print('Ticket '+str(finalTickets[ticketID])+ ' coming from '+ location + ' is assigned to '+str(finalOrder[agentToWorkWith])+ ' at '+str(getAssignedTime))
+            payloadTicket = {'ticket': {'comment': {'body':ticketComment,'public':'false','author_id':'25264784308'},'assignee_id':finalOrder[agentToWorkWith]}}
             payloadJson = json.dumps(payloadTicket)
             requests.put(updateTicketURL,headers=headersWithContentType, data=payloadJson)
             d.execute("update autoassignment SET last_at = ? where agent_id = ?", (getAssignedTime,finalOrder[agentToWorkWith]))
             conn2.commit()
         conn2.close()
+
+    def getLocation(ticketID):
+        ticketLocation = 'None'
+        auditTicketURL = ticket_url+str(ticketID)+'/audits.json'
+        ticketAudit = requests.get(auditTicketURL,headers=headers)
+        system = ticketAudit.json()['audits'][0]['metadata']['system']
+        print (len(system))
+        if ('location' in system):
+            ticketLocation = str(ticketAudit.json()['audits'][0]['metadata']['system']['location'])
+        return ticketLocation
 
 	# MAIN LOGIC IS HERE # 
 
