@@ -15,6 +15,7 @@ from requests.adapters import HTTPAdapter
 # zendesk basic url and queries
 basic_url = 'https://contentful.zendesk.com/api/v2/search.json?query='
 ticket_url = 'https://contentful.zendesk.com/api/v2/tickets/'
+user_url = 'https://contentful.zendesk.com/api/v2/users/'
 unassignedTicketsQuery = 'type:ticket status<=pending assignee:none group:'
 
 # token and headers
@@ -54,6 +55,21 @@ def main():
             print (str(len(opsDump['results']))+' ops tickets are found')
             for ticket in range (0,len(opsDump['results'])):
                 opsTicket.append(opsDump['results'][ticket]['id'])
+
+    def checkDomain(ticketToCheckID):
+        showTicketURL = ticket_url+str(ticketToCheckID)+'.json'
+        ticketDetails = requests.get(showTicketURL,headers=headers)
+        requesterID = ticketDetails.json()['ticket']['requester_id']
+        showUserURL = user_url+str(requesterID)+'.json'
+        userDetails = requests.get(showUserURL,headers=headers)
+        userEmail = userDetails.json()['user']['email']
+        if 'contentful' in userEmail:
+            followerURL = ticket_url+str(ticketToCheckID)+'/followers'
+            followerDetails = requests.get(followerURL,headers=headers)
+            originalRequester = followerDetails.json()['users'][0]['id']
+        else:
+            originalRequester = requesterID
+        return originalRequester
     
     # getting current time zone
     def getCurrentTimeZone():
@@ -125,13 +141,14 @@ def main():
             getAssignedTime = int(datetime.utcnow().timestamp())
             agentToWorkWith = ticketID%len(finalOrder)
             updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
+            newRequester = checkDomain(ticketID)
             location = getLocation(finalTickets[ticketID])
             if (location == 'None'):
                 ticketComment = 'This ticket has been auto-assigned'
             else:
                 ticketComment = 'This ticket coming from ' + location + ' and has been auto-assigned'
             print('Ticket '+str(finalTickets[ticketID])+ ' coming from '+ location + ' is assigned to '+str(finalOrder[agentToWorkWith])+ ' at '+str(getAssignedTime))
-            payloadTicket = {'ticket': {'comment': {'body':ticketComment,'public':'false','author_id':'25264784308'},'assignee_id':finalOrder[agentToWorkWith]}}
+            payloadTicket = {'ticket': {'comment': {'body':ticketComment,'public':'false','author_id':'25264784308'},'assignee_id':finalOrder[agentToWorkWith],'requester_id':newRequester}}
             payloadJson = json.dumps(payloadTicket)
             requests.put(updateTicketURL,headers=headersWithContentType, data=payloadJson)
             d.execute("update autoassignment SET last_at = ? where agent_id = ?", (getAssignedTime,finalOrder[agentToWorkWith]))
