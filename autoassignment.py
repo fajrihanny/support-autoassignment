@@ -1,14 +1,16 @@
 # start of new autoassignment.py
 
 from datetime import datetime
+from datetime import date
 from datetime import timedelta
 import time
 from pytz import timezone
 import json
 import requests
 import sqlite3
-from requests.adapters import HTTPAdapter
-# from requests.packages.urllib3.util.retry import Retry
+from workalendar.europe import Germany
+from workalendar.oceania import NewZealand
+from workalendar.usa import California
 
 # ALL CONSTANTS GO HERE 
 
@@ -77,6 +79,9 @@ def main():
         timeSF = datetime.now(timezone('America/Los_Angeles'))
         timeNZ = datetime.now(timezone('Pacific/Auckland'))
         tz_BER = timeBER.hour
+        calBerlin = Germany()
+        calSF = California()
+        calNZ = NewZealand()
         isBerlinWeekday = datetime.isoweekday(timeBER)
         print ('Berlin time: ', tz_BER)
         tz_SF = timeSF.hour
@@ -85,11 +90,11 @@ def main():
         tz_NZ = timeNZ.hour
         isNZWeekday = datetime.isoweekday(timeNZ)
         print ('New Zealand time : ', tz_NZ)
-        if (tz_BER >= startTime and tz_BER <= endTime) and (isBerlinWeekday < 6):
+        if (tz_BER >= startTime and tz_BER <= endTime) and (isBerlinWeekday < 6) and (calBerlin.is_holiday(date(timeBER.year,timeBER.month,timeBER.day))):
             availableTimeZone.append('berlin')
-        if (tz_NZ >= startTime and tz_NZ <= endTime) and (isNZWeekday < 6):
+        if (tz_NZ >= startTime and tz_NZ <= endTime) and (isNZWeekday < 6) and (calNZ.is_holiday(date(timeNZ.year,timeNZ.month,timeNZ.day))):
             availableTimeZone.append('nz')
-        if (tz_SF >= startTime and tz_SF <= endTime) and (isSFWeekday < 6):
+        if (tz_SF >= startTime and tz_SF <= endTime) and (isSFWeekday < 6) and (calSF.is_holiday(date(timeSF.year,timeSF.month,timeSF.day))):
             availableTimeZone.append('sf')
         print ('Working timezone: ',availableTimeZone)
 
