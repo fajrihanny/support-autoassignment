@@ -65,7 +65,7 @@ def main():
         showUserURL = user_url+str(requesterID)+'.json'
         userDetails = requests.get(showUserURL,headers=headers)
         userEmail = userDetails.json()['user']['email']
-        if 'contentful' in userEmail:
+        if '@contentful.com' in userEmail:
             followerURL = ticket_url+str(ticketToCheckID)+'/followers'
             followerDetails = requests.get(followerURL,headers=headers)
             originalRequester = followerDetails.json()['users'][0]['id']
@@ -90,11 +90,11 @@ def main():
         tz_NZ = timeNZ.hour
         isNZWeekday = datetime.isoweekday(timeNZ)
         print ('New Zealand time : ', tz_NZ)
-        if (tz_BER >= startTime and tz_BER <= endTime) and (isBerlinWeekday < 6) and (calBerlin.is_holiday(date(timeBER.year,timeBER.month,timeBER.day))):
+        if (tz_BER >= startTime and tz_BER <= endTime) and (isBerlinWeekday < 6) and not (calBerlin.is_holiday(date(timeBER.year,timeBER.month,timeBER.day))):
             availableTimeZone.append('berlin')
-        if (tz_NZ >= startTime and tz_NZ <= endTime) and (isNZWeekday < 6) and (calNZ.is_holiday(date(timeNZ.year,timeNZ.month,timeNZ.day))):
+        if (tz_NZ >= startTime and tz_NZ <= endTime) and (isNZWeekday < 6) and not (calSF.is_holiday(date(timeSF.year,timeSF.month,timeSF.day))):
             availableTimeZone.append('nz')
-        if (tz_SF >= startTime and tz_SF <= endTime) and (isSFWeekday < 6) and (calSF.is_holiday(date(timeSF.year,timeSF.month,timeSF.day))):
+        if (tz_SF >= startTime and tz_SF <= endTime) and (isSFWeekday < 6) and not (calNZ.is_holiday(date(timeNZ.year,timeNZ.month,timeNZ.day))):
             availableTimeZone.append('sf')
         print ('Working timezone: ',availableTimeZone)
 
@@ -146,7 +146,7 @@ def main():
             getAssignedTime = int(datetime.utcnow().timestamp())
             agentToWorkWith = ticketID%len(finalOrder)
             updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
-            newRequester = checkDomain(ticketID)
+            newRequester = checkDomain(finalTickets[ticketID])
             location = getLocation(finalTickets[ticketID])
             if (location == 'None'):
                 ticketComment = 'This ticket has been auto-assigned'
