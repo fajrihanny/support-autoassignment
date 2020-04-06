@@ -68,7 +68,10 @@ def main():
         if '@contentful.com' in userEmail:
             followerURL = ticket_url+str(ticketToCheckID)+'/followers'
             followerDetails = requests.get(followerURL,headers=headers)
-            originalRequester = followerDetails.json()['users'][0]['id']
+            if (followerDetails.json()['count'] > 0):
+                originalRequester = followerDetails.json()['users'][0]['id']
+            else:
+                originalRequester = requesterID
         else:
             originalRequester = requesterID
         return originalRequester
@@ -143,6 +146,7 @@ def main():
         conn2 = sqlite3.connect('./autoassignment.db')
         d = conn2.cursor()
         for ticketID in range(0,len(finalTickets)):
+            print('Assigning ticket '+str(finalTickets[ticketID])+'...')
             getAssignedTime = int(datetime.utcnow().timestamp())
             agentToWorkWith = ticketID%len(finalOrder)
             updateTicketURL = ticket_url+str(finalTickets[ticketID])+'.json'
