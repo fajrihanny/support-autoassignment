@@ -61,19 +61,23 @@ def main():
     def checkDomain(ticketToCheckID):
         showTicketURL = ticket_url+str(ticketToCheckID)+'.json'
         ticketDetails = requests.get(showTicketURL,headers=headers)
-        requesterID = ticketDetails.json()['ticket']['requester_id']
-        showUserURL = user_url+str(requesterID)+'.json'
+        originalRequester = ticketDetails.json()['ticket']['requester_id']
+        showUserURL = user_url+str(originalRequester)+'.json'
         userDetails = requests.get(showUserURL,headers=headers)
         userEmail = userDetails.json()['user']['email']
-        if '@contentful.com' in userEmail:
-            followerURL = ticket_url+str(ticketToCheckID)+'/followers'
-            followerDetails = requests.get(followerURL,headers=headers)
-            if (followerDetails.json()['count'] > 0):
-                originalRequester = followerDetails.json()['users'][0]['id']
-            else:
-                originalRequester = requesterID
-        else:
-            originalRequester = requesterID
+        if(userEmail is not None):
+            if '@contentful.com' in userEmail:
+                print('This ticket is coming from Contentful - ' + userEmail)
+                followerURL = ticket_url+str(ticketToCheckID)+'/followers'
+                followerDetails = requests.get(followerURL,headers=headers)
+                followerCount = followerDetails.json()['count']
+                if (followerCount > 0):
+                    for followeremail in range (0,followerCount):
+                        if('@contentful.com' not in followerDetails.json()['users'][followeremail]['email']):
+                            originalRequester = followerDetails.json()['users'][followeremail]['id']
+                            print ('update the requester to : '+str(followerDetails.json()['users'][followeremail]['email']))
+                            break
+
         return originalRequester
     
     # getting current time zone
