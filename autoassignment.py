@@ -32,8 +32,15 @@ ops_switchoff = False
 support_switchoff = False
 
 # variables for timezone
-startTime = 8
-endTime = 17
+berStartTime = 8
+berEndTime = 17
+nzStartTime = 8
+nzEndTime = 17
+sfStartTime = 8
+sfEndTime = 17
+
+# zendesk org variable
+enterprise = False
 
 def main():
     availableTimeZone = []
@@ -62,6 +69,10 @@ def main():
         showTicketURL = ticket_url+str(ticketToCheckID)+'.json'
         ticketDetails = requests.get(showTicketURL,headers=headers)
         originalRequester = ticketDetails.json()['ticket']['requester_id']
+        if (ticketDetails.json()['ticket']['organization_id'] is not None):
+            enterprise = True
+        else:
+            enterprise = False
         showUserURL = user_url+str(originalRequester)+'.json'
         userDetails = requests.get(showUserURL,headers=headers)
         userEmail = userDetails.json()['user']['email']
@@ -97,11 +108,11 @@ def main():
         tz_NZ = timeNZ.hour
         isNZWeekday = datetime.isoweekday(timeNZ)
         print ('New Zealand time : ', tz_NZ)
-        if (tz_BER >= startTime and tz_BER <= endTime) and (isBerlinWeekday < 6) and not (calBerlin.is_holiday(date(timeBER.year,timeBER.month,timeBER.day))):
+        if (tz_BER >= berStartTime and tz_BER <= berEndTime) and (isBerlinWeekday < 6) and not (calBerlin.is_holiday(date(timeBER.year,timeBER.month,timeBER.day))):
             availableTimeZone.append('berlin')
-        if (tz_NZ >= startTime and tz_NZ <= endTime) and (isNZWeekday < 6) and not (calSF.is_holiday(date(timeSF.year,timeSF.month,timeSF.day))):
+        if (tz_NZ >= nzStartTime and tz_NZ <= nzEndTime) and (isNZWeekday < 6) and not (calSF.is_holiday(date(timeSF.year,timeSF.month,timeSF.day))):
             availableTimeZone.append('nz')
-        if (tz_SF >= startTime and tz_SF <= endTime) and (isSFWeekday < 6) and not (calNZ.is_holiday(date(timeNZ.year,timeNZ.month,timeNZ.day))):
+        if (tz_SF >= sfStartTime and tz_SF <= sfEndTime) and (isSFWeekday < 6) and not (calNZ.is_holiday(date(timeNZ.year,timeNZ.month,timeNZ.day))):
             availableTimeZone.append('sf')
         print ('Working timezone: ',availableTimeZone)
 
