@@ -108,8 +108,11 @@ def main():
         tz_NZ = timeNZ.hour
         isNZWeekday = datetime.isoweekday(timeNZ)
         print ('New Zealand time : ', tz_NZ)
-        if (tz_BER >= berStartTime and tz_BER <= berEndTime) and (isBerlinWeekday < 6) and not (calBerlin.is_holiday(date(timeBER.year,timeBER.month,timeBER.day))):
-            availableTimeZone.append('berlin')
+        if (tz_BER >= berStartTime and tz_BER <= berEndTime) and (isBerlinWeekday < 6):
+            if not (calBerlin.is_holiday(date(timeBER.year,timeBER.month,timeBER.day))):
+                availableTimeZone.append('berlin')
+            else:
+                print ('It is PH in Berlin')
         if (tz_NZ >= nzStartTime and tz_NZ <= nzEndTime) and (isNZWeekday < 6) and not (calSF.is_holiday(date(timeSF.year,timeSF.month,timeSF.day))):
             availableTimeZone.append('nz')
         if (tz_SF >= sfStartTime and tz_SF <= sfEndTime) and (isSFWeekday < 6) and not (calNZ.is_holiday(date(timeNZ.year,timeNZ.month,timeNZ.day))):
