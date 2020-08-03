@@ -38,6 +38,9 @@ nzStartTime = 8
 nzEndTime = 17
 sfStartTime = 8
 sfEndTime = 17
+berHoliday = False
+nzHoliday = False
+sfHoliday = False
 
 # zendesk org variable
 enterprise = False
@@ -109,14 +112,17 @@ def main():
         isNZWeekday = datetime.isoweekday(timeNZ)
         print ('New Zealand time : ', tz_NZ)
         if (tz_BER >= berStartTime and tz_BER <= berEndTime) and (isBerlinWeekday < 6):
-            if not (calBerlin.is_holiday(date(timeBER.year,timeBER.month,timeBER.day))):
-                availableTimeZone.append('berlin')
-            else:
-                print ('It is PH in Berlin')
-        if (tz_NZ >= nzStartTime and tz_NZ <= nzEndTime) and (isNZWeekday < 6) and not (calSF.is_holiday(date(timeSF.year,timeSF.month,timeSF.day))):
+            availableTimeZone.append('berlin')
+            if (calBerlin.is_holiday(date(timeBER.year,timeBER.month,timeBER.day))):
+                berHoliday = True
+        if (tz_NZ >= nzStartTime and tz_NZ <= nzEndTime) and (isNZWeekday < 6):
             availableTimeZone.append('nz')
-        if (tz_SF >= sfStartTime and tz_SF <= sfEndTime) and (isSFWeekday < 6) and not (calNZ.is_holiday(date(timeNZ.year,timeNZ.month,timeNZ.day))):
+            if (calSF.is_holiday(date(timeSF.year,timeSF.month,timeSF.day))):
+                nzHoliday = True
+        if (tz_SF >= sfStartTime and tz_SF <= sfEndTime) and (isSFWeekday < 6):
             availableTimeZone.append('sf')
+            if (calNZ.is_holiday(date(timeNZ.year,timeNZ.month,timeNZ.day))):
+                sfHoliday = True         
         print ('Working timezone: ',availableTimeZone)
 
     # searching available agents based on timezones using user tags
