@@ -72,6 +72,7 @@ def main():
         showTicketURL = ticket_url+str(ticketToCheckID)+'.json'
         ticketDetails = requests.get(showTicketURL,headers=headers)
         originalRequester = ticketDetails.json()['ticket']['requester_id']
+        #check if the organization belongs to Enterprise
         if (ticketDetails.json()['ticket']['organization_id'] is not None):
             enterprise = True
         else:
