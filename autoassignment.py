@@ -43,7 +43,7 @@ nzHoliday = False
 sfHoliday = False
 
 # zendesk org variable
-enterprise = False
+isEnterprise = False
 
 def main():
     availableTimeZone = []
@@ -73,10 +73,7 @@ def main():
         ticketDetails = requests.get(showTicketURL,headers=headers)
         originalRequester = ticketDetails.json()['ticket']['requester_id']
         #check if the organization belongs to Enterprise
-        if (ticketDetails.json()['ticket']['organization_id'] is not None):
-            enterprise = True
-        else:
-            enterprise = False
+        checkEnterprise(ticketDetails.json()['ticket']['organization_id'])
         showUserURL = user_url+str(originalRequester)+'.json'
         userDetails = requests.get(showUserURL,headers=headers)
         userEmail = userDetails.json()['user']['email']
@@ -94,7 +91,27 @@ def main():
                             break
 
         return originalRequester
+    # check SLA of a ticket
+    def checkSLA(ticketID):
     
+    # check holiday for Berlin/NZ/SF
+    def checkHoliday(region):
+        if (region is 'berlin'):
+            if (calBerlin.is_holiday(date(timeBER.year,timeBER.month,timeBER.day))):
+                berHoliday = True
+        if (region is 'sf'):
+            if (calSF.is_holiday(date(timeSF.year,timeSF.month,timeSF.day))):
+                nzHoliday = True
+
+
+
+    # checking Enterprise organization
+    def checkEnterprise(organization_id):
+        if organization_id is not None:
+            isEnterprise = True
+        else:
+            isEnterprise = False   
+
     # getting current time zone
     def getCurrentTimeZone():
         timeBER = datetime.now(timezone('Europe/Berlin'))
@@ -114,12 +131,10 @@ def main():
         print ('New Zealand time : ', tz_NZ)
         if (tz_BER >= berStartTime and tz_BER <= berEndTime) and (isBerlinWeekday < 6):
             availableTimeZone.append('berlin')
-            if (calBerlin.is_holiday(date(timeBER.year,timeBER.month,timeBER.day))):
-                berHoliday = True
+            checkHoliday('berlin')
         if (tz_NZ >= nzStartTime and tz_NZ <= nzEndTime) and (isNZWeekday < 6):
             availableTimeZone.append('nz')
-            if (calSF.is_holiday(date(timeSF.year,timeSF.month,timeSF.day))):
-                nzHoliday = True
+            checkHoliday('sf')
         if (tz_SF >= sfStartTime and tz_SF <= sfEndTime) and (isSFWeekday < 6):
             availableTimeZone.append('sf')
             if (calNZ.is_holiday(date(timeNZ.year,timeNZ.month,timeNZ.day))):
