@@ -41,6 +41,9 @@ sfEndTime = 17
 berHoliday = False
 nzHoliday = False
 sfHoliday = False
+isHolidaySF = False
+isHolidayBer = False
+isHolidayNZ = False
 
 # zendesk org variable
 isEnterprise = False
@@ -104,6 +107,26 @@ def main():
 
     
     # check holiday for Berlin/NZ/SF
+    # timestamp = date(timeXX.year,timeXX.month,timeXX.day)
+    def checkHoliday(timezone,timestamp):
+        if timezone == 'sf':
+            holidaySF = California()
+            if(holidaySF.is_holiday(timestamp)):
+                isHolidaySF = True
+            else: 
+                isHolidaySF = False
+        if timezone == 'nz':
+            holidayNZ = NewZealand()
+            if(holidayNZ.is_holiday(timestamp)):
+                isHolidayNZ = True
+            else:
+                isHolidayNZ = False
+        if timezone == 'ber':
+            holidayBer = Germany()
+            if (holidayBer.is_holiday(timestamp)):
+                isHolidayBer = True
+            else:
+                isHolidayBer = False        
 
     # checking Enterprise organization
     def checkEnterprise(organization_id):
