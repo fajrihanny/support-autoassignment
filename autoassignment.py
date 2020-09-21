@@ -118,6 +118,10 @@ def main():
         timeSF = datetime.now(timezone('America/Los_Angeles'))
         timeNZ = datetime.now(timezone('Pacific/Auckland'))
         tz_BER = timeBER.hour
+        # calendar list to check holiday
+        calBerlin = Germany()
+        calSF = California()
+        calNZ = NewZealand()
         isBerlinWeekday = datetime.isoweekday(timeBER)
         print ('Berlin time: ', tz_BER)
         tz_SF = timeSF.hour
@@ -126,12 +130,12 @@ def main():
         tz_NZ = timeNZ.hour
         isNZWeekday = datetime.isoweekday(timeNZ)
         print ('New Zealand time : ', tz_NZ)
-        if (tz_BER >= berStartTime and tz_BER <= berEndTime) and (isBerlinWeekday < 6):
+        if (tz_BER >= berStartTime and tz_BER <= berEndTime) and (isBerlinWeekday < 6) and not (calBerlin.is_holiday(date(timeBER.year,timeBER.month,timeBER.day))):
             availableTimeZone.append('berlin')
-        if (tz_NZ >= nzStartTime and tz_NZ <= nzEndTime) and (isNZWeekday < 6):
+        if (tz_NZ >= nzStartTime and tz_NZ <= nzEndTime) and (isNZWeekday < 6) and not (calSF.is_holiday(date(timeSF.year,timeSF.month,timeSF.day))):
             availableTimeZone.append('nz')
-        if (tz_SF >= sfStartTime and tz_SF <= sfEndTime) and (isSFWeekday < 6):
-            availableTimeZone.append('sf')     
+        if (tz_SF >= sfStartTime and tz_SF <= sfEndTime) and (isSFWeekday < 6) and not (calNZ.is_holiday(date(timeNZ.year,timeNZ.month,timeNZ.day))):
+            availableTimeZone.append('sf')
         print ('Working timezone: ',availableTimeZone)
 
     # searching available agents based on timezones using user tags
