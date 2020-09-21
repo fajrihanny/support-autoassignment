@@ -44,6 +44,7 @@ sfHoliday = False
 
 # zendesk org variable
 isEnterprise = False
+isSLA = False
 
 def main():
     availableTimeZone = []
@@ -93,17 +94,16 @@ def main():
         return originalRequester
     # check SLA of a ticket
     def checkSLA(ticketID):
+        tagsTicketURL = ticket_url+str(ticketID)+'/tags.json'
+        ticketTags = requests.get(tagsTicketURL,headers=headers)
+        tags = ticketTags.json()['tags']
+        if ('non_urgent') in tags:
+            isSLA = False
+        if (('sev3') or ('sev2') or ('sev1')) in tags:
+            isSLA = True
+
     
     # check holiday for Berlin/NZ/SF
-    def checkHoliday(region):
-        if (region is 'berlin'):
-            if (calBerlin.is_holiday(date(timeBER.year,timeBER.month,timeBER.day))):
-                berHoliday = True
-        if (region is 'sf'):
-            if (calSF.is_holiday(date(timeSF.year,timeSF.month,timeSF.day))):
-                nzHoliday = True
-
-
 
     # checking Enterprise organization
     def checkEnterprise(organization_id):
@@ -118,9 +118,6 @@ def main():
         timeSF = datetime.now(timezone('America/Los_Angeles'))
         timeNZ = datetime.now(timezone('Pacific/Auckland'))
         tz_BER = timeBER.hour
-        calBerlin = Germany()
-        calSF = California()
-        calNZ = NewZealand()
         isBerlinWeekday = datetime.isoweekday(timeBER)
         print ('Berlin time: ', tz_BER)
         tz_SF = timeSF.hour
@@ -131,14 +128,10 @@ def main():
         print ('New Zealand time : ', tz_NZ)
         if (tz_BER >= berStartTime and tz_BER <= berEndTime) and (isBerlinWeekday < 6):
             availableTimeZone.append('berlin')
-            checkHoliday('berlin')
         if (tz_NZ >= nzStartTime and tz_NZ <= nzEndTime) and (isNZWeekday < 6):
             availableTimeZone.append('nz')
-            checkHoliday('sf')
         if (tz_SF >= sfStartTime and tz_SF <= sfEndTime) and (isSFWeekday < 6):
-            availableTimeZone.append('sf')
-            if (calNZ.is_holiday(date(timeNZ.year,timeNZ.month,timeNZ.day))):
-                sfHoliday = True         
+            availableTimeZone.append('sf')     
         print ('Working timezone: ',availableTimeZone)
 
     # searching available agents based on timezones using user tags
