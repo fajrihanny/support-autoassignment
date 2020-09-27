@@ -28,8 +28,6 @@ headersWithContentType = {'Authorization':'Basic '+base64encodedtoken,'Content-T
 # zendesk groups
 group_id_ops = '360000168347'
 group_id_support = '20917813'
-ops_switchoff = False
-support_switchoff = False
 
 # variables for timezone
 berStartTime = 8
@@ -78,6 +76,8 @@ def main():
         originalRequester = ticketDetails.json()['ticket']['requester_id']
         #check if the organization belongs to Enterprise
         checkEnterprise(ticketDetails.json()['ticket']['organization_id'])
+        #get the ticket tags
+        checkSLA(ticketDetails.json()['ticket']['tags'])
         showUserURL = user_url+str(originalRequester)+'.json'
         userDetails = requests.get(showUserURL,headers=headers)
         userEmail = userDetails.json()['user']['email']
@@ -95,11 +95,9 @@ def main():
                             break
 
         return originalRequester
+    
     # check SLA of a ticket
-    def checkSLA(ticketID):
-        tagsTicketURL = ticket_url+str(ticketID)+'/tags.json'
-        ticketTags = requests.get(tagsTicketURL,headers=headers)
-        tags = ticketTags.json()['tags']
+    def checkSLA(tags):
         if ('non_urgent') in tags:
             isSLA = False
         if (('sev3') or ('sev2') or ('sev1')) in tags:
@@ -121,7 +119,7 @@ def main():
                 isHolidayNZ = True
             else:
                 isHolidayNZ = False
-        if timezone == 'ber':
+        if timezone == 'berlin':
             holidayBer = Germany()
             if (holidayBer.is_holiday(timestamp)):
                 isHolidayBer = True
@@ -130,10 +128,17 @@ def main():
 
     # checking Enterprise organization
     def checkEnterprise(organization_id):
-        if organization_id is not None:
+        if organization_id != 'null':
             isEnterprise = True
         else:
             isEnterprise = False   
+
+    def autoReply(ticketID):
+        updateTicketURL = ticket_url+str(ticketID)+'.json'
+        autoReplyMessage = "Thank you for contacting Contentful Support team. We have received your ticket and will get back to you as soon as possible."
+        autoReplypayload = {'ticket': {'comment': {'body':autoReplyMessage,'public':'true','author_id':'25264784308'}}}
+        autoReplyJson = json.dumps(autoReplypayload)
+        requests.put(updateTicketURL,headers=headersWithContentType, data=autoReplyJson)
 
     # getting current time zone
     def getCurrentTimeZone():
@@ -141,24 +146,20 @@ def main():
         timeSF = datetime.now(timezone('America/Los_Angeles'))
         timeNZ = datetime.now(timezone('Pacific/Auckland'))
         tz_BER = timeBER.hour
-        # calendar list to check holiday
-        calBerlin = Germany()
-        calSF = California()
-        calNZ = NewZealand()
         isBerlinWeekday = datetime.isoweekday(timeBER)
-        print ('Berlin time: ', tz_BER)
         tz_SF = timeSF.hour
         isSFWeekday = datetime.isoweekday(timeSF)
-        print ('San Fransisco time : ', tz_SF)
         tz_NZ = timeNZ.hour
         isNZWeekday = datetime.isoweekday(timeNZ)
-        print ('New Zealand time : ', tz_NZ)
-        if (tz_BER >= berStartTime and tz_BER <= berEndTime) and (isBerlinWeekday < 6) and not (calBerlin.is_holiday(date(timeBER.year,timeBER.month,timeBER.day))):
+        if (tz_BER >= berStartTime and tz_BER <= berEndTime) and (isBerlinWeekday < 6):
             availableTimeZone.append('berlin')
-        if (tz_NZ >= nzStartTime and tz_NZ <= nzEndTime) and (isNZWeekday < 6) and not (calSF.is_holiday(date(timeSF.year,timeSF.month,timeSF.day))):
+            checkHoliday('berlin',date(timeBER.year,timeBER.month,timeBER.day))
+        if (tz_NZ >= nzStartTime and tz_NZ <= nzEndTime) and (isNZWeekday < 6):
             availableTimeZone.append('nz')
-        if (tz_SF >= sfStartTime and tz_SF <= sfEndTime) and (isSFWeekday < 6) and not (calNZ.is_holiday(date(timeNZ.year,timeNZ.month,timeNZ.day))):
+            checkHoliday('nz',date(timeNZ.year,timeNZ.month,timeNZ.day))
+        if (tz_SF >= sfStartTime and tz_SF <= sfEndTime) and (isSFWeekday < 6):
             availableTimeZone.append('sf')
+            checkHoliday('sf',date(timeSF.year,timeSF.month,timeSF.day))
         print ('Working timezone: ',availableTimeZone)
 
     # searching available agents based on timezones using user tags
@@ -203,6 +204,7 @@ def main():
     # assigning tickets to agent and update the ticket
     def assignTickets(finalOrder,finalTickets):
         # conn2 = sqlite3.connect('/Users/fajrihanny/Documents/Projects/support-autoassignment/autoassignment.db')
+        agentTZ = 'nowhere'
         conn2 = sqlite3.connect('./autoassignment.db')
         d = conn2.cursor()
         for ticketID in range(0,len(finalTickets)):
@@ -220,6 +222,19 @@ def main():
             payloadTicket = {'ticket': {'comment': {'body':ticketComment,'public':'false','author_id':'25264784308'},'assignee_id':finalOrder[agentToWorkWith],'requester_id':newRequester}}
             payloadJson = json.dumps(payloadTicket)
             requests.put(updateTicketURL,headers=headersWithContentType, data=payloadJson)
+            # check agent timezone 
+            agentTZ = str("select timezone from autoassignment where agent_id = ?", (finalOrder[agentToWorkWith]))
+            # check if it's Enterprise & non-SLA & falls on public Holiday for the timezone of the assigned agent
+            if ((isEnterprise is True) and (isSLA is False)):
+                if agentTZ == 'berlin':
+                    if isHolidayBer is True:
+                        autoReply(str(finalTickets[ticketID]))
+                if agentTZ == 'sf':
+                    if isHolidaySF is True:
+                        autoReply(str(finalTickets[ticketID]))
+                if agentTZ == 'nz':
+                    if isHolidayNZ is True:
+                        autoReply(str(finalTickets[ticketID]))
             d.execute("update autoassignment SET last_at = ? where agent_id = ?", (getAssignedTime,finalOrder[agentToWorkWith]))
             conn2.commit()
         conn2.close()
@@ -244,7 +259,7 @@ def main():
         if (len(availableTimeZone)>0):
             print ('Getting available agents..')
             # 3. Get the available agents based (param:available time zone from no 2)
-            if (len(supportTicket)>0 and support_switchoff ==  False):
+            if (len(supportTicket)>0):
                 orderSupport = []
                 availSupport = []
                 finalSupportOrder = []
@@ -264,7 +279,7 @@ def main():
                 # 7. Post update to Slack channel with the name of the agent
             else:
                 print ('No unassigned support tickets to distribute')
-            if (len(opsTicket)>0 and ops_switchoff == False):
+            if (len(opsTicket)>0):
                 orderOps = []
                 availOps = []
                 finalOpsOrder = []
