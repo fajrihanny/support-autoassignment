@@ -196,6 +196,7 @@ def main():
     # getting the final order of the agents
     def getOrderAgent(order,agents):
         finalAgentOrder = []
+        print('len'+str(len(order)))
         for agentOrder in range (0,len(order)):
             if order[agentOrder] in agents:
                 finalAgentOrder.append(order[agentOrder])
@@ -204,7 +205,7 @@ def main():
     # assigning tickets to agent and update the ticket
     def assignTickets(finalOrder,finalTickets):
         # conn2 = sqlite3.connect('/Users/fajrihanny/Documents/Projects/support-autoassignment/autoassignment.db')
-        agentTZ = 'nowhere'
+        agentTZ = []
         conn2 = sqlite3.connect('./autoassignment.db')
         d = conn2.cursor()
         for ticketID in range(0,len(finalTickets)):
@@ -223,16 +224,19 @@ def main():
             payloadJson = json.dumps(payloadTicket)
             requests.put(updateTicketURL,headers=headersWithContentType, data=payloadJson)
             # check agent timezone 
-            agentTZ = str("select timezone from autoassignment where agent_id = ?", (finalOrder[agentToWorkWith]))
+            # print (type(d.execute("select timezone from autoassignment where agent_id = ?", (finalOrder[agentToWorkWith]))))
+            for agentTZrow in (d.execute("select timezone from autoassignment where agent_id = ?", (finalOrder[agentToWorkWith],))):
+                agentTZ.append(agentTZrow[0])
+                print (agentTZ[0])
             # check if it's Enterprise & non-SLA & falls on public Holiday for the timezone of the assigned agent
             if ((isEnterprise is True) and (isSLA is False)):
-                if agentTZ == 'berlin':
+                if agentTZ[0] == 'berlin':
                     if isHolidayBer is True:
                         autoReply(str(finalTickets[ticketID]))
-                if agentTZ == 'sf':
+                if agentTZ[0] == 'sf':
                     if isHolidaySF is True:
                         autoReply(str(finalTickets[ticketID]))
-                if agentTZ == 'nz':
+                if agentTZ[0] == 'nz':
                     if isHolidayNZ is True:
                         autoReply(str(finalTickets[ticketID]))
             d.execute("update autoassignment SET last_at = ? where agent_id = ?", (getAssignedTime,finalOrder[agentToWorkWith]))
@@ -287,7 +291,7 @@ def main():
                 availOps = getAvailableAgents(availableTimeZone,'ops')
                 if (len(availOps)>0):
                     # 4. Get the last assignments of the agent and order them
-                    orderOps = getLastAssignment('ops')  
+                    orderOps = getLastAssignment('ops') 
                     # 5. Get the final order 
                     finalOpsOrder = getOrderAgent(orderOps,availOps)      
                     # 6. Assign the ticket to the agents, save the assignment time, and update the ticket with message from bot
